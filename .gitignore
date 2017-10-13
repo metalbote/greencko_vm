@@ -1,0 +1,35 @@
+## OS-specific files.
+.DS_Store
+
+## IDE and language files.
+
+# JetBrains
+.idea/
+
+# netbeans
+nbproject/
+
+# pinegrow
+_pgbackup/
+pinegrow.json
+
+# others
+.project/
+.bundle/
+node_modules/
+vendor/
+
+## Temporary Folders
+tmp/
+.sass-cache/
+
+## Log files
+*.logs
+
+## Ansible files.
+*.retry
+.galaxy_install_info
+
+## Vagrant files.
+.vagrant/
+vagrant_ansible_inventory_default

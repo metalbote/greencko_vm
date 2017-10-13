@@ -1,0 +1,337 @@
+---
+vagrant_box: geerlingguy/centos7
+vagrant_user: vagrant
+vagrant_synced_folder_default_type: nfs
+vagrant_gui: false
+vagrant_hostname: greenstrap.test
+vagrant_machine_name: greenstrap
+vagrant_ip: 192.168.88.88
+vagrant_public_ip: ""
+
+vagrant_synced_folders:
+  # Webroot
+  - local_path: ../htdocs
+    destination: /var/www/greenstrap
+    type: nfs
+    create: true
+  # Scripts
+  - local_path: ./scripts
+    destination: /home/vagrant/bin
+    type: nfs
+    create: true
+  # Database Backup
+  - local_path: ../htdocs/backup
+    destination: /var/backup/mysql
+    type: nfs
+    create: true
+
+# Memory and CPU
+vagrant_memory: 2048
+vagrant_cpus: 1
+
+# vagrant plugins
+vagrant_plugins:
+  - name: vagrant-vbguest
+  - name: vagrant-hostsupdater
+
+drupalvm_vagrant_version_min: '1.8.6'
+drupalvm_ansible_version_min: '2.2'
+vagrant_manage_sudoers: true
+vagrant_log: info
+
+force_ansible_local: false
+
+# 'apache' or 'nginx'.
+drupalvm_webserver: apache
+
+# 'mysql' or 'pgsql'.
+drupal_db_backend: mysql
+
+drupal_build_makefile: false
+drush_makefile_path: "{{ config_dir }}/drupal.make.yml"
+drush_make_options: "--no-gitinfofile"
+
+drupal_build_composer: false
+drupal_composer_path: "{{ config_dir }}/drupal.composer.json"
+drupal_composer_install_dir: "/var/www/greenstrap/web"
+drupal_composer_dependencies:
+  - "drupal/devel:1.x-dev"
+
+drupal_build_composer_project: true
+drupal_composer_project_package: "drupal-composer/drupal-project:8.x-dev"
+drupal_composer_project_options: "--prefer-dist --stability dev --no-interaction"
+
+drupal_install_site: true
+
+# Required Drupal settings.
+drupal_core_path: "{{ drupal_composer_install_dir }}/web"
+drupal_core_owner: "{{ drupalvm_user }}"
+drupal_db_user: drupal
+drupal_db_password: drupal
+drupal_db_name: drupal
+drupal_db_host: localhost
+drupal_major_version: 8
+drupal_domain: "{{ vagrant_hostname }}"
+drupal_site_name: "Drupal"
+drupal_install_profile: standard
+drupal_enable_modules: [ 'devel' ]
+drupal_account_name: admin
+drupal_account_pass: admin
+
+# Arguments or options to pass to `drush site-install`.
+drupal_site_install_extra_args: []
+
+# Cron jobs
+drupalvm_cron_jobs:
+ - {
+    name: "Drupal Cron",
+    hour: "17",
+    minute: "01",
+    job: "/home/vagrant/bin/mysql_dump.sh"
+  }
+
+configure_drush_aliases: true
+drush_aliases_host_template: "templates/drupalvm.aliases.drushrc.php.j2"
+drush_aliases_guest_template: "templates/drupalvm-local.aliases.drushrc.php.j2"
+
+apache_vhost_php_fpm_parameters: |
+    <FilesMatch \.php$>
+      SetHandler "proxy:fcgi://{{ php_fpm_listen }}"
+    </FilesMatch>
+
+# Apache VirtualHosts.
+apache_vhosts:
+  - servername: "{{ drupal_domain }}"
+    serveralias: "www.{{ drupal_domain }}"
+    documentroot: "{{ drupal_core_path }}"
+    extra_parameters: "{{ apache_vhost_php_fpm_parameters }}"
+
+  - servername: "adminer.{{ vagrant_hostname }}"
+    documentroot: "{{ adminer_install_dir }}"
+    extra_parameters: "{{ apache_vhost_php_fpm_parameters }}"
+
+  - servername: "xhprof.{{ vagrant_hostname }}"
+    documentroot: "{{ php_xhprof_html_dir }}"
+    extra_parameters: "{{ apache_vhost_php_fpm_parameters }}"
+
+  - servername: "pimpmylog.{{ vagrant_hostname }}"
+    documentroot: "{{ pimpmylog_install_dir }}"
+    extra_parameters: "{{ apache_vhost_php_fpm_parameters }}"
+
+  - servername: "{{ vagrant_ip }}"
+    serveralias: "dashboard.{{ vagrant_hostname }}"
+    documentroot: "{{ dashboard_install_dir }}"
+    extra_parameters: "{{ apache_vhost_php_fpm_parameters }}"
+
+apache_packages_state: latest
+apache_remove_default_vhost: true
+apache_mods_enabled:
+  - expires.load
+  - headers.load
+  - ssl.load
+  - rewrite.load
+  - proxy.load
+  - proxy_fcgi.load
+
+# Nginx hosts.
+nginx_hosts:
+  - server_name: "{{ drupal_domain }} www.{{ drupal_domain }}"
+    root: "{{ drupal_core_path }}"
+    is_php: true
+
+  - server_name: "adminer.{{ vagrant_hostname }}"
+    root: "{{ adminer_install_dir }}"
+    is_php: true
+
+  - server_name: "xhprof.{{ vagrant_hostname }}"
+    root: "{{ php_xhprof_html_dir }}"
+    is_php: true
+
+  - server_name: "pimpmylog.{{ vagrant_hostname }}"
+    root: "{{ pimpmylog_install_dir }}"
+    is_php: true
+
+  - server_name: "{{ vagrant_ip }} dashboard.{{ vagrant_hostname }}"
+    root: "{{ dashboard_install_dir }}"
+    is_php: true
+
+nginx_remove_default_vhost: true
+nginx_ppa_use: true
+nginx_vhost_template: "templates/nginx-vhost.conf.j2"
+
+# MySQL databases and users.
+mysql_databases:
+  - name: "{{ drupal_db_name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_general_ci
+
+mysql_users:
+  - name: "{{ drupal_db_user }}"
+    host: "%"
+    password: "{{ drupal_db_password }}"
+    priv: "{{ drupal_db_name }}.*:ALL"
+
+# PostgreSQL databases and users.
+postgresql_databases:
+  - name: "{{ drupal_db_name }}"
+
+postgresql_users:
+  - name: "{{ drupal_db_user }}"
+    password: "{{ drupal_db_password }}"
+    db: "{{ drupal_db_name }}"
+    priv: "ALL"
+
+installed_extras:
+  - adminer
+  # - blackfire
+  - drupalconsole
+  - drush
+  # - elasticsearch
+  # - java
+  - mailhog
+  # - memcached
+  # - newrelic
+  - nodejs
+  - pimpmylog
+  # - redis
+  - ruby
+  # - selenium
+  # - solr
+  - tideways
+  - upload-progress
+  - varnish
+  - xdebug
+  # - xhprof # use `tideways` if you're installing PHP 7+
+
+# Add any extra apt or yum packages you would like installed.
+extra_packages:
+  - mc
+  - sqlite
+
+# You can configure almost anything else on the server in the rest of this file.
+drush_version: "8.1.14"
+
+extra_security_enabled: false
+
+firewall_enabled: true
+firewall_allowed_tcp_ports:
+  - "22"
+  - "25"
+  - "80"
+  - "81"
+  - "443"
+  - "4444"
+  - "8025"
+  - "8080"
+  - "8443"
+  - "8983"
+  - "9200"
+firewall_log_dropped_packets: false
+firewall_disable_firewalld: true
+firewall_disable_ufw: true
+
+# PHP Configuration. Currently-supported versions: 5.6, 7.0, 7.1, 7.2.
+# See version-specific notes: http://docs.drupalvm.com/en/latest/configurations/php/
+php_version: "7.1"
+php_install_recommends: yes
+php_memory_limit: "192M"
+php_display_errors: "On"
+php_display_startup_errors: "On"
+php_realpath_cache_size: "1024K"
+php_sendmail_path: "/opt/mailhog/mhsendmail"
+php_opcache_enabled_in_ini: true
+php_opcache_memory_consumption: "192"
+php_opcache_max_accelerated_files: 4096
+php_max_input_vars: "4000"
+php_post_max_size: "256M"
+php_upload_max_filesize: "256M"
+
+# Drupal VM defaults to using PHP-FPM with either Apache or Nginx.
+php_enable_php_fpm: true
+php_fpm_listen: "127.0.0.1:9000"
+
+composer_path: /usr/bin/composer
+composer_home_path: "/home/{{ drupalvm_user }}/.composer"
+composer_home_owner: "{{ drupalvm_user }}"
+composer_home_group: "{{ drupalvm_user }}"
+composer_global_packages:
+  - { name: hirak/prestissimo, release: '^0.3' }
+
+# Run specified scripts before or after VM is provisioned. Use {{ playbook_dir }}
+# to reference the provisioning/ folder in Drupal VM or {{ config_dir }} to
+# reference the directory where your `config.yml` is.
+pre_provision_scripts: []
+post_provision_scripts: []
+  # - "{{ playbook_dir }}/../examples/scripts/configure-solr.sh"
+
+# MySQL Configuration.
+mysql_packages:
+  - mariadb
+  - mariadb-server
+  - mariadb-libs
+  - MySQL-python
+  - perl-DBD-MySQL
+mysql_daemon: mariadb
+mysql_socket: /var/lib/mysql/mysql.sock
+mysql_log_error: /var/log/mariadb/mariadb.log
+mysql_syslog_tag: mariadb
+mysql_pid_file: /var/run/mariadb/mariadb.pid
+
+mysql_root_username: root
+mysql_root_password: root
+mysql_slow_query_log_enabled: true
+mysql_slow_query_time: 2
+mysql_wait_timeout: 300
+adminer_install_filename: index.php
+
+# Node.js configuration (if enabled above).
+# Valid examples: "0.10", "0.12", "4.x", "5.x", "6.x".
+nodejs_version: "6.x"
+nodejs_npm_global_packages: []
+nodejs_install_npm_user: "{{ drupalvm_user }}"
+npm_config_prefix: "/home/{{ drupalvm_user }}/.npm-global"
+
+# Ruby Configuration (if enabled above).
+ruby_install_gems_user: "{{ drupalvm_user }}"
+ruby_install_gems: []
+
+# Varnish Configuration (if enabled above).
+varnish_listen_port: "81"
+varnish_default_vcl_template_path: templates/drupalvm.vcl.j2
+varnish_default_backend_host: "127.0.0.1"
+varnish_default_backend_port: "80"
+
+# Pimp my Log settings.
+pimpmylog_install_dir: /usr/share/php/pimpmylog
+pimpmylog_grant_all_privs: true
+
+# XDebug configuration. XDebug is disabled by default for better performance.
+php_xdebug_default_enable: 0
+php_xdebug_coverage_enable: 0
+php_xdebug_cli_enable: 1
+php_xdebug_remote_enable: 1
+php_xdebug_remote_connect_back: 1
+# Use PHPSTORM for PHPStorm, sublime.xdebug for Sublime Text.
+php_xdebug_idekey: PHPSTORM
+php_xdebug_max_nesting_level: 256
+php_xdebug_remote_host: "{{ ansible_default_ipv4.gateway }}"
+
+# Solr Configuration (if enabled above).
+solr_version: "5.5.3"
+solr_xms: "64M"
+solr_xmx: "128M"
+
+# Selenium configuration.
+selenium_version: 2.53.0
+
+# Docker configuration.
+docker_container_name: drupal-vm
+docker_image_name: drupal-vm
+docker_image_path: ~/Downloads
+
+# Other configuration.
+dashboard_install_dir: /var/www/dashboard
+known_hosts_path: ~/.ssh/known_hosts
+hostname_configure: true
+hostname_fqdn: "{{ vagrant_hostname }}"
+ssh_home: "{{ drupal_core_path }}"
