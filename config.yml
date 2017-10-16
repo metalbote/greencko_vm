@@ -3,15 +3,15 @@ vagrant_box: geerlingguy/centos7
 vagrant_user: vagrant
 vagrant_synced_folder_default_type: nfs
 vagrant_gui: false
-vagrant_hostname: greenstrap.test
-vagrant_machine_name: greenstrap
+vagrant_hostname: greencko.test
+vagrant_machine_name: greencko
 vagrant_ip: 192.168.88.88
 vagrant_public_ip: ""
 
 vagrant_synced_folders:
   # Webroot
   - local_path: ../htdocs
-    destination: /var/www/greenstrap
+    destination: /var/www/greencko
     type: nfs
     create: true
   # Scripts
@@ -53,7 +53,7 @@ drush_make_options: "--no-gitinfofile"
 
 drupal_build_composer: false
 drupal_composer_path: "{{ config_dir }}/drupal.composer.json"
-drupal_composer_install_dir: "/var/www/greenstrap/web"
+drupal_composer_install_dir: "/var/www/greencko"
 drupal_composer_dependencies:
   - "drupal/devel:1.x-dev"
 
@@ -66,17 +66,17 @@ drupal_install_site: true
 # Required Drupal settings.
 drupal_core_path: "{{ drupal_composer_install_dir }}/web"
 drupal_core_owner: "{{ drupalvm_user }}"
-drupal_db_user: drupal
-drupal_db_password: drupal
-drupal_db_name: drupal
+drupal_db_user: greencko
+drupal_db_password: greencko
+drupal_db_name: greencko
 drupal_db_host: localhost
 drupal_major_version: 8
 drupal_domain: "{{ vagrant_hostname }}"
 drupal_site_name: "Drupal"
 drupal_install_profile: standard
 drupal_enable_modules: [ 'devel' ]
-drupal_account_name: admin
-drupal_account_pass: admin
+drupal_account_name: greencko
+drupal_account_pass: greencko
 
 # Arguments or options to pass to `drush site-install`.
 drupal_site_install_extra_args: []
@@ -103,6 +103,11 @@ apache_vhost_php_fpm_parameters: |
 apache_vhosts:
   - servername: "{{ drupal_domain }}"
     serveralias: "www.{{ drupal_domain }}"
+    documentroot: "{{ drupal_core_path }}"
+    extra_parameters: "{{ apache_vhost_php_fpm_parameters }}"
+
+  - servername: "testing.test"
+    serveralias: "www.testing.test"
     documentroot: "{{ drupal_core_path }}"
     extra_parameters: "{{ apache_vhost_php_fpm_parameters }}"
 
@@ -233,7 +238,8 @@ firewall_disable_ufw: true
 # PHP Configuration. Currently-supported versions: 5.6, 7.0, 7.1, 7.2.
 # See version-specific notes: http://docs.drupalvm.com/en/latest/configurations/php/
 php_version: "7.1"
-php_install_recommends: yes
+php_enablerepo: "epel,remi,remi-php71"
+php_install_recommends: no
 php_memory_limit: "192M"
 php_display_errors: "On"
 php_display_startup_errors: "On"
